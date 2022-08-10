@@ -1,7 +1,9 @@
 import _ from 'lodash';
-import type { Heading, Content, Text, Paragraph, InlineCode, Strong, Literal } from 'mdast';
-import { fromMarkdown } from 'mdast-util-from-markdown';
+import * as fs from 'fs/promises';
 import { fetch } from 'undici';
+import type { Heading, Content, Text, Paragraph } from 'mdast';
+import { fromMarkdown } from 'mdast-util-from-markdown';
+import { OpenAPIV3 } from "openapi-types";
 
 const API_MARKDOWN_URL = 'https://raw.githubusercontent.com/ipfs/ipfs-docs/main/docs/reference/kubo/rpc.md';
 const DOCS_BASE_URL = `https://docs.ipfs.tech/reference/kubo/rpc/`;
@@ -22,8 +24,10 @@ const endpointStartHeader = markdownAST.children.findIndex(child =>
 
 if (endpointStartHeader === -1) throw new Error('Could not find start of endpoint headers');
 
-// Step 1: we build up a list of endpoints, simply mapping the endpoint path (taken from the
-// header directly) to a list of the markdown AST nodes relevant to that endpoint.
+// -------------------------------------------------------------------------------------
+// Step 1: we build up a list of endpoints, simply mapping the endpoint path (taken from
+// the header directly) to a list of the markdown AST nodes relevant to that endpoint.
+// -------------------------------------------------------------------------------------
 
 const endpointsMarkdownFlatAST = markdownAST.children.slice(endpointStartHeader + 1);
 
@@ -58,16 +62,18 @@ for (let node of endpointsMarkdownFlatAST) {
     }
 }
 
-// Step 2: we parse the endpoint for each node, building a map from endpoint path to the parsed
-// details for each endpoint (the description, parameters, etc)
-
+// -------------------------------------------------------------------------------------
+// Step 2: we parse the endpoint for each node, building a map from endpoint path to the
+// parsed details for each endpoint (the description, parameters, etc)
+// -------------------------------------------------------------------------------------
 interface EndpointData {
     path: string;
-    summary: string;
+    description: string;
     warning: 'deprecated' | 'experimental' | undefined;
     parameters: Array<EndpointParameter>;
     requestBodyDescription: string | undefined;
     responseBodyExample: EndpointRespnseExample | undefined;
+    docsUrl: string;
 }
 
 interface EndpointParameter {
@@ -106,7 +112,7 @@ function getRawMarkdown(nodes: Content[]) {
     ].join('\n');
 }
 
-function parseIntroNodes(endpoint: string, nodes: Content[]): Pick<EndpointData, 'summary' | 'warning'> {
+function parseIntroNodes(endpoint: string, nodes: Content[]): Pick<EndpointData, 'description' | 'warning'> {
     if (nodes.some(n => n.type !== 'paragraph')) {
         throw new Error(`Intro nodes for ${endpoint} are not all paragraphs`);
     }
@@ -131,9 +137,9 @@ function parseIntroNodes(endpoint: string, nodes: Content[]): Pick<EndpointData,
         }
     }
 
-    const summaryNodes = paragraphs.slice(warningEndIndex + 1);
-    const summary = getRawMarkdown(summaryNodes);
-    return { summary, warning };
+    const descriptionNodes = paragraphs.slice(warningEndIndex + 1);
+    const description = getRawMarkdown(descriptionNodes);
+    return { description, warning };
 }
 
 function parseArguments(endpoint: string, node: Content | undefined): Array<EndpointParameter> {
@@ -253,7 +259,7 @@ const endpointData: { [path: string]: EndpointData } = _.mapValues(endpointsMark
         if (argumentsHeaderIndex === -1) throw new Error(`No arguments header found for ${endpoint}`);
 
         const introNodes = nodes.slice(0, argumentsHeaderIndex);
-        const { summary, warning } = parseIntroNodes(endpoint, introNodes);
+        const { description, warning } = parseIntroNodes(endpoint, introNodes);
 
         const requestBodyIndex = nodes.findIndex(node => isHeader(node, 3, v => v === 'Request Body'));
         const responseIndex = nodes.findIndex(node => isHeader(node, 3, v => v === 'Response'));
@@ -282,12 +288,12 @@ const endpointData: { [path: string]: EndpointData } = _.mapValues(endpointsMark
 
         return {
             path: endpoint,
-            summary,
+            description,
             warning,
             parameters,
             requestBodyDescription,
             responseBodyExample,
-            url: `${DOCS_BASE_URL}#${endpoint.slice(1).replace(/\//g, '-')}`
+            docsUrl: `${DOCS_BASE_URL}#${endpoint.slice(1).replace(/\//g, '-')}`
         }
     } catch (e) {
         console.log(JSON.stringify(nodes, null, 2));
@@ -295,4 +301,91 @@ const endpointData: { [path: string]: EndpointData } = _.mapValues(endpointsMark
     }
 });
 
-console.log(JSON.stringify(endpointData, null, 2));
+
+// -------------------------------------------------------------------------------
+// Step 3: Turn the parsed structured endpoint data into a full OpenAPI schema:
+// -------------------------------------------------------------------------------
+
+function getJsonSchemaForIpfsType(type: string):
+    | { type: 'boolean' | 'string' | 'integer' }
+    | { type: 'array', items: { type: 'string' } }
+{
+    if (type === 'array') {
+        return { type: 'array', items: { type: 'string' } };
+    };
+
+    const jsonSchemaType = ({
+        'bool': 'boolean',
+        'string': 'string',
+        'int': 'integer',
+        'uint': 'integer',
+        'int64': 'integer',
+    } as const)[type];
+
+    if (!jsonSchemaType) {
+        throw new Error(`Unrecognized parameter type: ${type}`);
+    }
+
+    return { type: jsonSchemaType };
+}
+
+const spec: OpenAPIV3.Document = {
+    openapi: '3.0.0',
+    info: {
+        title: 'IPFS RPC API',
+        version: 'v0',
+        description: '',
+        ...({
+            'x-providerName': 'IPFS',
+            'x-logo': {
+                url: 'https://raw.githubusercontent.com/ipfs/ipfs-docs/55fe8bc6a53ba3b9023951fb4b432efbbc81fba5/docs/.vuepress/public/images/ipfs-logo.svg' // TODO: Does this work? Good option?
+            }
+        } as any)
+    },
+    externalDocs: {
+        url: DOCS_BASE_URL
+    },
+    paths: _.mapValues(endpointData, (endpoint) => {
+        const operation: OpenAPIV3.OperationObject = {
+            operationId: endpoint.path, // Safe, as this is no REST API - all POST, one method per path
+            description: endpoint.description,
+            externalDocs: { url: endpoint.docsUrl },
+            deprecated: endpoint.warning === 'deprecated' ? true : undefined,
+            parameters: endpoint.parameters.map(param => ({
+                name: param.name,
+                in: 'query',
+                description: param.description,
+                required: param.required ? true : undefined,
+                deprecated: param.warning === 'deprecated' ? true : undefined,
+                schema: {
+                    ...getJsonSchemaForIpfsType(param.type),
+                    default: param.defaultValue
+                }
+            })),
+            requestBody: endpoint.requestBodyDescription
+                ? {
+                    description: endpoint.requestBodyDescription,
+                    content: {}
+                }
+                : undefined,
+            responses: {
+                200: {
+                    description: 'Successful response',
+                    content: endpoint.responseBodyExample ?
+                        {
+                            'application/json': {
+                                example: endpoint.responseBodyExample
+                            }
+                        }
+                        : undefined
+                }
+            }
+        };
+
+        return {
+            post: operation
+        }
+    })
+};
+
+await fs.writeFile('./ipfs-openapi.json', JSON.stringify(spec, null, 2));
