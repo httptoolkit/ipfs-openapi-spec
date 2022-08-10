@@ -4,13 +4,15 @@
 
 An IPFS OpenAPI spec, automatically generated from the official documentation.
 
-This repo pulls the raw documentation for the IPFS node RPC API in markdown format from https://raw.githubusercontent.com/ipfs/ipfs-docs/main/docs/reference/kubo/rpc.md, parses it, and then generates appropriate OpenAPI to match.
+You can jump directly to the raw specification [here](https://raw.githubusercontent.com/httptoolkit/ipfs-openapi-spec/main/ipfs-openapi.json).
+
+This repo pulls the raw documentation for the IPFS node RPC API in markdown format from https://raw.githubusercontent.com/ipfs/ipfs-docs/main/docs/reference/kubo/rpc.md, parses it, and then generates a complete OpenAPI spec to match, including full descriptions of everything, parameter types and details, example response values, and everything else.
 
 This results in a machine-readable specification for the IPFS node API, which you can use with the many existing tools that support OpenAPI to:
 
-- Generate SDKs or even simple IPFS node stub severs using [openapi-generator](https://github.com/OpenAPITools/openapi-generator)
-- Fuzz your IPFS node via [openapi-fuzzer](https://github.com/matusf/openapi-fuzzer),
+- Generate SDKs or even simple IPFS node stub severs using [openapi-generator](https://github.com/OpenAPITools/openapi-generator).
 - Build [interactive documentation](https://editor.swagger.io/?url=https://raw.githubusercontent.com/httptoolkit/ipfs-openapi-spec/main/ipfs-openapi.json) to play around with your IPFS node directly.
+- Fuzz your IPFS node via [openapi-fuzzer](https://github.com/matusf/openapi-fuzzer).
 - Drop this spec into tools like Postman and others to more easily make requests to your node's API.
 - Programmatically explore & interact with the entire IPFS API yourself, any other way you like.
 
