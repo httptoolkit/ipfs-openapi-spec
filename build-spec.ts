@@ -67,6 +67,41 @@ for (let node of endpointsMarkdownFlatAST) {
     }
 }
 
+// Given a list of nodes (raw nodes, in order & unfiltered from the original markdown), returns
+// the raw markdown that generated this content. This is useful as some formatting details are
+// awkward to reverse, so it's much nicer to just grab from the original text.
+function getRawMarkdown(nodes: Content[]) {
+    if (nodes.length === 0) return '';
+
+    // Note that all positions here are ONE-INDEXED. Line 1 is the first line, column 1 is the
+    // first column, etc.
+    const start = nodes[0].position!.start;
+    const end = nodes[nodes.length - 1].position!.end;
+
+    const markdownLines = markdownText.split('\n');
+
+    const relevantLines = markdownLines.slice(start.line - 1, end.line); // 1-indexed -> end inclusive
+
+    return [
+        relevantLines[0].slice(start.column - 1),
+        ...relevantLines.slice(1, -1),
+        ...(relevantLines.length > 1
+            ? [relevantLines.slice(-1)[0].slice(0, end.column - 1)]
+            : []
+        )
+    ].join('\n');
+}
+
+// We treat the chunk of text between the two :::-tagged blocks as the API description:
+const startOfDescriptionIndex = markdownAST.children.findIndex(c =>
+    c.type === 'paragraph' && !(c.children[0] as Text).value?.startsWith(':::')
+);
+const endOfArgumentsIndex = markdownAST.children.slice(startOfDescriptionIndex + 1).findIndex(c =>
+    c.type === 'paragraph' && (c.children[0] as Text).value?.startsWith(':::')
+) + startOfDescriptionIndex + 1;
+
+const apiDescription = getRawMarkdown(markdownAST.children.slice(startOfDescriptionIndex, endOfArgumentsIndex));
+
 // -------------------------------------------------------------------------------------
 // Step 2: we parse the endpoint for each node, building a map from endpoint path to the
 // parsed details for each endpoint (the description, parameters, etc)
@@ -99,32 +134,7 @@ type IpfsParamType =
     | 'array' // Always arrays of string
     | 'arg-series'; // Synthetic - our type for duplicate param names
 
-type EndpointRespnseExample = { [key: string]: unknown } | Array<unknown>
-
-// Given a list of nodes (raw nodes, in order & unfiltered from the original markdown), returns
-// the raw markdown that generated this content. This is useful as some formatting details are
-// awkward to reverse, so it's much nicer to just grab from the original text.
-function getRawMarkdown(nodes: Content[]) {
-    if (nodes.length === 0) return '';
-
-    // Note that all positions here are ONE-INDEXED. Line 1 is the first line, column 1 is the
-    // first column, etc.
-    const start = nodes[0].position!.start;
-    const end = nodes[nodes.length - 1].position!.end;
-
-    const markdownLines = markdownText.split('\n');
-
-    const relevantLines = markdownLines.slice(start.line - 1, end.line); // 1-indexed -> end inclusive
-
-    return [
-        relevantLines[0].slice(start.column - 1),
-        ...relevantLines.slice(1, -1),
-        ...(relevantLines.length > 1
-            ? [relevantLines.slice(-1)[0].slice(0, end.column - 1)]
-            : []
-        )
-    ].join('\n');
-}
+type EndpointRespnseExample = { [key: string]: unknown } | Array<unknown>;
 
 function parseIntroNodes(endpoint: string, nodes: Content[]): Pick<EndpointData, 'description' | 'warning'> {
     if (nodes.some(n => n.type !== 'paragraph')) {
@@ -401,7 +411,7 @@ const spec: OpenAPIV3.Document = {
     info: {
         title: 'IPFS RPC API',
         version: 'v0',
-        description: '',
+        description: apiDescription,
         ...({
             'x-providerName': 'IPFS',
             'x-logo': {
