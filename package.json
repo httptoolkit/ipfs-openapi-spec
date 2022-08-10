@@ -23,6 +23,9 @@
     "typescript": "^4.7.4"
   },
   "dependencies": {
+    "@types/lodash": "^4.14.182",
+    "@types/mdast": "^3.0.10",
+    "lodash": "^4.17.21",
     "mdast-util-from-markdown": "^1.2.0",
     "undici": "^5.8.2"
   }
