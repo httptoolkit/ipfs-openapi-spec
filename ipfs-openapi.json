@@ -9,6 +9,20 @@
       "url": "https://raw.githubusercontent.com/ipfs/ipfs-docs/55fe8bc6a53ba3b9023951fb4b432efbbc81fba5/docs/.vuepress/public/images/ipfs-logo.svg"
     }
   },
+  "servers": [
+    {
+      "description": "Local IPFS node",
+      "url": "http://localhost:5001"
+    },
+    {
+      "description": "Local IPFS node",
+      "url": "http://127.0.0.1:5001"
+    },
+    {
+      "description": "Infura hosted IPFS node",
+      "url": "https://ipfs.infura.io:5001"
+    }
+  ],
   "externalDocs": {
     "url": "https://docs.ipfs.tech/reference/kubo/rpc/"
   },

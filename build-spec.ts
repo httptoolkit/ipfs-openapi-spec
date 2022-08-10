@@ -404,6 +404,20 @@ const spec: OpenAPIV3.Document = {
             }
         } as any)
     },
+    servers: [
+        {
+            description: 'Local IPFS node',
+            url: 'http://localhost:5001',
+        },
+        {
+            description: 'Local IPFS node',
+            url: 'http://127.0.0.1:5001',
+        },
+        {
+            description: 'Infura hosted IPFS node',
+            url: 'https://ipfs.infura.io:5001'
+        }
+    ],
     externalDocs: {
         url: DOCS_BASE_URL
     },
