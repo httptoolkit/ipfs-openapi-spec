@@ -79,11 +79,20 @@ interface EndpointData {
 interface EndpointParameter {
     name: string;
     description: string;
-    type: string;
-    defaultValue?: string;
+    type: IpfsParamType;
+    defaultValue?: unknown;
     required: boolean;
     warning: 'deprecated' | 'experimental' | undefined;
 }
+
+type IpfsParamType =
+    | 'string'
+    | 'bool'
+    | 'int'
+    | 'uint'
+    | 'int64'
+    | 'array' // Always arrays of string
+    | 'arg-series'; // Synthetic - our type for duplicate param names
 
 type EndpointRespnseExample = { [key: string]: unknown } | Array<unknown>
 
@@ -157,7 +166,7 @@ function parseArguments(endpoint: string, node: Content | undefined): Array<Endp
         throw new Error(`Unexpected argument node type for ${endpoint}: ${node.type}`);
     }
 
-    return node.children.map((child, i) => {
+    let params = node.children.map((child, i) => {
         if (child.children.some(c => c.type !== 'paragraph')) {
             throw new Error(`Unexpected types for ${endpoint} arg line ${i}: ${
                 child.children.map(c => c.type).join(', ')
@@ -194,8 +203,9 @@ function parseArguments(endpoint: string, node: Content | undefined): Array<Endp
         }).join('').trim();
 
         // This regex handles a few tricky cases - notably including some bits of markdown that repeat the
-        // default value (Default: X, Default: X.) and defaults that include spaces, colons and newlines. Tricky.
-        const matchDefinition = /^\[(\w+)\]: (.*?\.)(?: Default: (.*?)\.)*(?: Required: (\w+)\.)?$/s
+        // default value (Default: X, Default: X.), defaults that include spaces, colons and newlines. and
+        // newlines before 'Required:'. Tricky.
+        const matchDefinition = /^\[(\w+)\]: (.*?\.?)(?:\sDefault: (.*?)\.)*(?:\sRequired: (\w+)\.)?$/s
             .exec(fullDefinition);
 
         if (!matchDefinition) {
@@ -203,11 +213,15 @@ function parseArguments(endpoint: string, node: Content | undefined): Array<Endp
         }
         const [, type, description, defaultValue, isRequired] = matchDefinition;
 
+        if (!isIpfsParamType(type)) {
+            throw new Error(`Unexpected type for ${endpoint} arg ${i}: ${type}`);
+        }
+
         return {
             name,
             description,
             type,
-            defaultValue,
+            defaultValue: parseValue(type, defaultValue),
             required: isRequired === 'yes',
             warning:
                 description.toLowerCase().includes('deprecated')
@@ -215,8 +229,56 @@ function parseArguments(endpoint: string, node: Content | undefined): Array<Endp
                 : description.toLowerCase().includes('experimental')
                     ? 'experimental'
                 : undefined
-        };
+        } as const;
     });
+
+    // We have a few duplicate parameters. These are intended to be sent as a series of
+    // parameters, e.g. arg=X&arg=Y. They may have independent descriptions however, and
+    // in theory could have different types (but for now they're all arg=string params).
+    Object.values(_.groupBy(params, p => p.name))
+        .filter(g => g.length > 1) // Dupes only
+        .forEach(paramGroup => {
+            const combinedParam = {
+                name: paramGroup[0].name,
+                description: paramGroup.map((p, i) =>
+                    `${paramGroup[0].name}${i}: ${p.description}`
+                ).join('\n\n'),
+                type: 'arg-series',
+                defaultValue: paramGroup.some(p => p.defaultValue)
+                    ? paramGroup.map(p => p.defaultValue)
+                    : undefined,
+                required: paramGroup.some(p => p.required),
+                warning: paramGroup[0].warning
+            } as const;
+
+            const firstParamIndex = params.indexOf(paramGroup[0]);
+            // Remove all the dupe params
+            params = params.filter(p => p.name !== combinedParam.name);
+            // Put the combined param back, in the position of the first param
+            params.splice(firstParamIndex, 0, combinedParam);
+        });
+
+    return params;
+}
+
+function isIpfsParamType(type: string): type is IpfsParamType {
+    return [
+        'string',
+        'bool',
+        'int',
+        'uint',
+        'int64',
+        'array',
+        'arg-series'
+    ].includes(type);
+}
+
+function parseValue(type: IpfsParamType, value: string | undefined): unknown | undefined {
+    if (value === undefined) return value;
+    if (type === 'string') return value;
+    if (type === 'bool') return value === 'true';
+    if (['int', 'uint', 'int64'].includes(type)) return parseInt(value, 10);
+    if (type === 'array' || type === 'arg-series') value.slice(1, -1).split(/[, ]/);
 }
 
 function parseResponseInfo(endpoint: string, nodes: Content[]): EndpointRespnseExample | undefined {
@@ -306,11 +368,11 @@ const endpointData: { [path: string]: EndpointData } = _.mapValues(endpointsMark
 // Step 3: Turn the parsed structured endpoint data into a full OpenAPI schema:
 // -------------------------------------------------------------------------------
 
-function getJsonSchemaForIpfsType(type: string):
+function getJsonSchemaForIpfsType(type: IpfsParamType):
     | { type: 'boolean' | 'string' | 'integer' }
     | { type: 'array', items: { type: 'string' } }
 {
-    if (type === 'array') {
+    if (type === 'array' || type === 'arg-series') {
         return { type: 'array', items: { type: 'string' } };
     };
 
@@ -323,7 +385,7 @@ function getJsonSchemaForIpfsType(type: string):
     } as const)[type];
 
     if (!jsonSchemaType) {
-        throw new Error(`Unrecognized parameter type: ${type}`);
+        throw new Error(`Could not convert parameter type: ${type}`);
     }
 
     return { type: jsonSchemaType };
@@ -338,7 +400,7 @@ const spec: OpenAPIV3.Document = {
         ...({
             'x-providerName': 'IPFS',
             'x-logo': {
-                url: 'https://raw.githubusercontent.com/ipfs/ipfs-docs/55fe8bc6a53ba3b9023951fb4b432efbbc81fba5/docs/.vuepress/public/images/ipfs-logo.svg' // TODO: Does this work? Good option?
+                url: 'https://raw.githubusercontent.com/ipfs/ipfs-docs/55fe8bc6a53ba3b9023951fb4b432efbbc81fba5/docs/.vuepress/public/images/ipfs-logo.svg'
             }
         } as any)
     },
@@ -351,12 +413,21 @@ const spec: OpenAPIV3.Document = {
             description: endpoint.description,
             externalDocs: { url: endpoint.docsUrl },
             deprecated: endpoint.warning === 'deprecated' ? true : undefined,
+            ...(endpoint.warning === 'experimental'
+                ? { 'x-experimental': true } as any
+                : {}
+            ),
             parameters: endpoint.parameters.map(param => ({
                 name: param.name,
                 in: 'query',
                 description: param.description,
                 required: param.required ? true : undefined,
                 deprecated: param.warning === 'deprecated' ? true : undefined,
+                ...(param.warning === 'experimental'
+                    ? { 'x-experimental': true } as any
+                    : {}
+                ),
+                explode: param.type === 'arg-series' ? true : undefined,
                 schema: {
                     ...getJsonSchemaForIpfsType(param.type),
                     default: param.defaultValue
