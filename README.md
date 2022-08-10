@@ -4,7 +4,7 @@
 
 An IPFS OpenAPI spec, automatically generated from the official documentation.
 
-You can jump directly to the raw specification [here](https://raw.githubusercontent.com/httptoolkit/ipfs-openapi-spec/main/ipfs-openapi.json).
+You can jump directly to the raw specification [here](https://raw.githubusercontent.com/httptoolkit/ipfs-openapi-spec/main/ipfs-openapi.json) or test it out with the interactive Swagger Editor [here](https://editor.swagger.io/?url=https://raw.githubusercontent.com/httptoolkit/ipfs-openapi-spec/main/ipfs-openapi.json).
 
 This repo pulls the raw documentation for the IPFS node RPC API in markdown format from https://raw.githubusercontent.com/ipfs/ipfs-docs/main/docs/reference/kubo/rpc.md, parses it, and then generates a complete OpenAPI spec to match, including full descriptions of everything, parameter types and details, example response values, and everything else.
 
