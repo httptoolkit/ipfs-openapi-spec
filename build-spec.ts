@@ -406,6 +406,8 @@ function getJsonSchemaForIpfsType(type: IpfsParamType):
     return { type: jsonSchemaType };
 }
 
+const API_PREFIX = '/api/v0/';
+
 const spec: OpenAPIV3.Document = {
     openapi: '3.0.0',
     info: {
@@ -438,7 +440,8 @@ const spec: OpenAPIV3.Document = {
     },
     paths: _.mapValues(endpointData, (endpoint) => {
         const operation: OpenAPIV3.OperationObject = {
-            operationId: endpoint.path, // Safe, as this is no REST API - all POST, one method per path
+            // This is a valid id, as this is no REST API - all POST, one method per path
+            operationId: endpoint.path.replace(API_PREFIX, ''),
             description: endpoint.description,
             externalDocs: { url: endpoint.docsUrl },
             deprecated: endpoint.warning === 'deprecated' ? true : undefined,
