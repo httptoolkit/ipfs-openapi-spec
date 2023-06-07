@@ -101,15 +101,6 @@
             }
           },
           {
-            "name": "pin",
-            "in": "query",
-            "description": "Pin this object when adding.",
-            "schema": {
-              "type": "boolean",
-              "default": true
-            }
-          },
-          {
             "name": "raw-leaves",
             "in": "query",
             "description": "Use raw blocks for leaf nodes.",
@@ -170,6 +161,23 @@
             "schema": {
               "type": "integer",
               "default": 32
+            }
+          },
+          {
+            "name": "pin",
+            "in": "query",
+            "description": "Pin locally to protect added files from garbage collection.",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "to-files",
+            "in": "query",
+            "description": "Add reference to Files API (MFS) at the provided path.",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -1033,21 +1041,6 @@
         }
       }
     },
-    "/api/v0/commands/completion/bash": {
-      "post": {
-        "operationId": "commands/completion/bash",
-        "description": "Generate bash shell completions.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-commands-completion-bash"
-        },
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Successful response"
-          }
-        }
-      }
-    },
     "/api/v0/config": {
       "post": {
         "operationId": "config",
@@ -1097,21 +1090,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v0/config/edit": {
-      "post": {
-        "operationId": "config/edit",
-        "description": "Open the config file for editing in $EDITOR.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-config-edit"
-        },
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Successful response"
           }
         }
       }
@@ -1949,7 +1927,7 @@
     "/api/v0/files/read": {
       "post": {
         "operationId": "files/read",
-        "description": "Read a file in a given MFS.",
+        "description": "Read a file from MFS.",
         "externalDocs": {
           "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-files-read"
         },
@@ -1990,7 +1968,7 @@
     "/api/v0/files/rm": {
       "post": {
         "operationId": "files/rm",
-        "description": "Remove a file.",
+        "description": "Remove a file from MFS.",
         "externalDocs": {
           "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-files-rm"
         },
@@ -2103,7 +2081,7 @@
     "/api/v0/files/write": {
       "post": {
         "operationId": "files/write",
-        "description": "Write to a mutable file in a given filesystem.",
+        "description": "Append to (modify) a file in MFS.",
         "externalDocs": {
           "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-files-write"
         },
@@ -2434,48 +2412,6 @@
         }
       }
     },
-    "/api/v0/key/export": {
-      "post": {
-        "operationId": "key/export",
-        "description": "Export a keypair",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-key-export"
-        },
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "name of key to export",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "output",
-            "in": "query",
-            "description": "The path where the output should be stored.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "format",
-            "in": "query",
-            "description": "The format of the exported private key, libp2p-protobuf-cleartext or pem-pkcs8-cleartext.",
-            "schema": {
-              "type": "string",
-              "default": "libp2p-protobuf-cleartext"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response"
-          }
-        }
-      }
-    },
     "/api/v0/key/gen": {
       "post": {
         "operationId": "key/gen",
@@ -2750,47 +2686,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v0/key/rotate": {
-      "post": {
-        "operationId": "key/rotate",
-        "description": "Rotates the IPFS identity.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-key-rotate"
-        },
-        "parameters": [
-          {
-            "name": "oldkey",
-            "in": "query",
-            "description": "Keystore name to use for backing up your existing identity.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "type",
-            "in": "query",
-            "description": "type of the key to create: rsa, ed25519.",
-            "schema": {
-              "type": "string",
-              "default": "ed25519"
-            }
-          },
-          {
-            "name": "size",
-            "in": "query",
-            "description": "size of the key to generate.",
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response"
           }
         }
       }
@@ -3349,7 +3244,7 @@
           {
             "name": "arg",
             "in": "query",
-            "description": "Path to object(s) to be pinned.",
+            "description": "CID or Path to be pinned.",
             "required": true,
             "schema": {
               "type": "string"
@@ -3952,26 +3847,25 @@
         }
       }
     },
-    "/api/v0/repo/migrate": {
+    "/api/v0/repo/ls": {
       "post": {
-        "operationId": "repo/migrate",
-        "description": "Apply any outstanding migrations to the repo.",
+        "operationId": "repo/ls",
+        "description": "List all local references.",
         "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-repo-migrate"
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-repo-ls"
         },
-        "parameters": [
-          {
-            "name": "allow-downgrade",
-            "in": "query",
-            "description": "Allow downgrading to a lower repo version.",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
+        "parameters": [],
         "responses": {
           "200": {
-            "description": "Successful response"
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "Err": "<string>",
+                  "Ref": "<string>"
+                }
+              }
+            }
           }
         }
       }
@@ -4217,168 +4111,6 @@
             }
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "example": {
-                  "Extra": "<string>",
-                  "ID": "<peer-id>",
-                  "Responses": [
-                    {
-                      "Addrs": [
-                        "<multiaddr-string>"
-                      ],
-                      "ID": "peer-id"
-                    }
-                  ],
-                  "Type": "<int>"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v0/routing/get": {
-      "post": {
-        "operationId": "routing/get",
-        "description": "Given a key, query the routing system for its best value.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-routing-get"
-        },
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "The key to find a value for.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "verbose",
-            "in": "query",
-            "description": "Print extra information.",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "example": {
-                  "Extra": "<string>",
-                  "ID": "<peer-id>",
-                  "Responses": [
-                    {
-                      "Addrs": [
-                        "<multiaddr-string>"
-                      ],
-                      "ID": "peer-id"
-                    }
-                  ],
-                  "Type": "<int>"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v0/routing/provide": {
-      "post": {
-        "operationId": "routing/provide",
-        "description": "Announce to the network that you are providing given values.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-routing-provide"
-        },
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "The key[s] to send provide records for.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "verbose",
-            "in": "query",
-            "description": "Print extra information.",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "recursive",
-            "in": "query",
-            "description": "Recursively provide entire graph.",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "example": {
-                  "Extra": "<string>",
-                  "ID": "<peer-id>",
-                  "Responses": [
-                    {
-                      "Addrs": [
-                        "<multiaddr-string>"
-                      ],
-                      "ID": "peer-id"
-                    }
-                  ],
-                  "Type": "<int>"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v0/routing/put": {
-      "post": {
-        "operationId": "routing/put",
-        "description": "Write a key/value pair to the routing system.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-routing-put"
-        },
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "The key to store the value at.",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "verbose",
-            "in": "query",
-            "description": "Print extra information.",
-            "schema": {
-              "type": "boolean"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "Argument `value-file` is of file type. This endpoint expects one or several files (depending on the command) in the body of the request as 'multipart/form-data'.",
-          "content": {}
-        },
         "responses": {
           "200": {
             "description": "Successful response",
@@ -5024,6 +4756,14 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "identify",
+            "in": "query",
+            "description": "Also list information about peers identify.",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -5036,6 +4776,18 @@
                     {
                       "Addr": "<string>",
                       "Direction": "<int>",
+                      "Identify": {
+                        "Addresses": [
+                          "<string>"
+                        ],
+                        "AgentVersion": "<string>",
+                        "ID": "<string>",
+                        "ProtocolVersion": "<string>",
+                        "Protocols": [
+                          "<string>"
+                        ],
+                        "PublicKey": "<string>"
+                      },
                       "Latency": "<string>",
                       "Muxer": "<string>",
                       "Peer": "<string>",
@@ -5049,30 +4801,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v0/update": {
-      "post": {
-        "operationId": "update",
-        "description": "",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-update"
-        },
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "Arguments for subcommand.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response"
           }
         }
       }
@@ -5212,6 +4940,57 @@
                   "FuseAllowOther": "<bool>",
                   "IPFS": "<string>",
                   "IPNS": "<string>"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v0/name/inspect": {
+      "post": {
+        "operationId": "name/inspect",
+        "description": "Inspects an IPNS Record",
+        "externalDocs": {
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-name-inspect"
+        },
+        "x-experimental": true,
+        "parameters": [
+          {
+            "name": "verify",
+            "in": "query",
+            "description": "CID of the public IPNS key to validate against.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Argument `record` is of file type. This endpoint expects one or several files (depending on the command) in the body of the request as 'multipart/form-data'.",
+          "content": {}
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "Entry": {
+                    "Data": "<object>",
+                    "PublicKey": "<string>",
+                    "Sequence": "<uint64>",
+                    "SignatureV1": "<string>",
+                    "SignatureV2": "<string>",
+                    "TTL": "<uint64>",
+                    "Validity": "<timestamp>",
+                    "ValidityType": "<int32>",
+                    "Value": "<string>"
+                  },
+                  "Validation": {
+                    "PublicKey": "<peer-id>",
+                    "Reason": "<string>",
+                    "Valid": "<bool>"
+                  }
                 }
               }
             }
@@ -5558,12 +5337,161 @@
         }
       }
     },
-    "/api/v0/pubsub/ls": {
+    "/api/v0/routing/get": {
       "post": {
-        "operationId": "pubsub/ls",
-        "description": "List subscribed topics by name.",
+        "operationId": "routing/get",
+        "description": "Given a key, query the routing system for its best value.",
         "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-ls"
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-routing-get"
+        },
+        "x-experimental": true,
+        "parameters": [
+          {
+            "name": "arg",
+            "in": "query",
+            "description": "The key to find a value for.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "Extra": "<string>",
+                  "ID": "<peer-id>",
+                  "Responses": [
+                    {
+                      "Addrs": [
+                        "<multiaddr-string>"
+                      ],
+                      "ID": "peer-id"
+                    }
+                  ],
+                  "Type": "<int>"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v0/routing/provide": {
+      "post": {
+        "operationId": "routing/provide",
+        "description": "Announce to the network that you are providing given values.",
+        "externalDocs": {
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-routing-provide"
+        },
+        "x-experimental": true,
+        "parameters": [
+          {
+            "name": "arg",
+            "in": "query",
+            "description": "The key[s] to send provide records for.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "verbose",
+            "in": "query",
+            "description": "Print extra information.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "recursive",
+            "in": "query",
+            "description": "Recursively provide entire graph.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "Extra": "<string>",
+                  "ID": "<peer-id>",
+                  "Responses": [
+                    {
+                      "Addrs": [
+                        "<multiaddr-string>"
+                      ],
+                      "ID": "peer-id"
+                    }
+                  ],
+                  "Type": "<int>"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v0/routing/put": {
+      "post": {
+        "operationId": "routing/put",
+        "description": "Write a key/value pair to the routing system.",
+        "externalDocs": {
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-routing-put"
+        },
+        "x-experimental": true,
+        "parameters": [
+          {
+            "name": "arg",
+            "in": "query",
+            "description": "The key to store the value at.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Argument `value-file` is of file type. This endpoint expects one or several files (depending on the command) in the body of the request as 'multipart/form-data'.",
+          "content": {}
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "Extra": "<string>",
+                  "ID": "<peer-id>",
+                  "Responses": [
+                    {
+                      "Addrs": [
+                        "<multiaddr-string>"
+                      ],
+                      "ID": "peer-id"
+                    }
+                  ],
+                  "Type": "<int>"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v0/swarm/resources": {
+      "post": {
+        "operationId": "swarm/resources",
+        "description": "Get a summary of all resources accounted for by the libp2p Resource Manager.",
+        "externalDocs": {
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-swarm-resources"
         },
         "x-experimental": true,
         "parameters": [],
@@ -5572,171 +5500,9 @@
             "description": "Successful response",
             "content": {
               "application/json": {
-                "example": {
-                  "Strings": [
-                    "<string>"
-                  ]
-                }
+                "example": "<object>"
               }
             }
-          }
-        }
-      }
-    },
-    "/api/v0/pubsub/peers": {
-      "post": {
-        "operationId": "pubsub/peers",
-        "description": "List peers we are currently pubsubbing with.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-peers"
-        },
-        "x-experimental": true,
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "Topic to list connected peers of.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "example": {
-                  "Strings": [
-                    "<string>"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v0/pubsub/pub": {
-      "post": {
-        "operationId": "pubsub/pub",
-        "description": "Publish data to a given pubsub topic.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-pub"
-        },
-        "x-experimental": true,
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "Topic to publish to (multibase encoded when sent over HTTP RPC).",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "Argument `data` is of file type. This endpoint expects one or several files (depending on the command) in the body of the request as 'multipart/form-data'.",
-          "content": {}
-        },
-        "responses": {
-          "200": {
-            "description": "Successful response"
-          }
-        }
-      }
-    },
-    "/api/v0/pubsub/sub": {
-      "post": {
-        "operationId": "pubsub/sub",
-        "description": "Subscribe to messages on a given topic.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-sub"
-        },
-        "x-experimental": true,
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "Name of topic to subscribe to (multibase encoded when sent over HTTP RPC).",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "example": {
-                  "data": "<string>",
-                  "from": "<string>",
-                  "seqno": "<string>",
-                  "topicIDs": [
-                    "<string>"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v0/swarm/limit": {
-      "post": {
-        "operationId": "swarm/limit",
-        "description": "Get or set resource limits for a scope.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-swarm-limit"
-        },
-        "x-experimental": true,
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "scope of the limit",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "description": "Argument `limit.json` is of file type. This endpoint expects one or several files (depending on the command) in the body of the request as 'multipart/form-data'.",
-          "content": {}
-        },
-        "responses": {
-          "200": {
-            "description": "Successful response"
-          }
-        }
-      }
-    },
-    "/api/v0/swarm/stats": {
-      "post": {
-        "operationId": "swarm/stats",
-        "description": "Report resource usage for a scope.",
-        "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-swarm-stats"
-        },
-        "x-experimental": true,
-        "parameters": [
-          {
-            "name": "arg",
-            "in": "query",
-            "description": "scope of the stat report",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful response"
           }
         }
       }
@@ -5869,14 +5635,6 @@
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "verbose",
-            "in": "query",
-            "description": "Print extra information.",
-            "schema": {
-              "type": "boolean"
-            }
           }
         ],
         "responses": {
@@ -5978,14 +5736,6 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
-          },
-          {
-            "name": "verbose",
-            "in": "query",
-            "description": "Print extra information.",
-            "schema": {
-              "type": "boolean"
             }
           }
         ],
@@ -6626,12 +6376,12 @@
         }
       }
     },
-    "/api/v0/repo/fsck": {
+    "/api/v0/pubsub/ls": {
       "post": {
-        "operationId": "repo/fsck",
-        "description": "Remove repo lockfiles.",
+        "operationId": "pubsub/ls",
+        "description": "List subscribed topics by name.",
         "externalDocs": {
-          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-repo-fsck"
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-ls"
         },
         "deprecated": true,
         "parameters": [],
@@ -6641,7 +6391,111 @@
             "content": {
               "application/json": {
                 "example": {
-                  "Message": "<string>"
+                  "Strings": [
+                    "<string>"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v0/pubsub/peers": {
+      "post": {
+        "operationId": "pubsub/peers",
+        "description": "List peers we are currently pubsubbing with.",
+        "externalDocs": {
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-peers"
+        },
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "arg",
+            "in": "query",
+            "description": "Topic to list connected peers of.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "Strings": [
+                    "<string>"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v0/pubsub/pub": {
+      "post": {
+        "operationId": "pubsub/pub",
+        "description": "Publish data to a given pubsub topic.",
+        "externalDocs": {
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-pub"
+        },
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "arg",
+            "in": "query",
+            "description": "Topic to publish to (multibase encoded when sent over HTTP RPC).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Argument `data` is of file type. This endpoint expects one or several files (depending on the command) in the body of the request as 'multipart/form-data'.",
+          "content": {}
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          }
+        }
+      }
+    },
+    "/api/v0/pubsub/sub": {
+      "post": {
+        "operationId": "pubsub/sub",
+        "description": "Subscribe to messages on a given topic.",
+        "externalDocs": {
+          "url": "https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-pubsub-sub"
+        },
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "arg",
+            "in": "query",
+            "description": "Name of topic to subscribe to (multibase encoded when sent over HTTP RPC).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": "<string>",
+                  "from": "<string>",
+                  "seqno": "<string>",
+                  "topicIDs": [
+                    "<string>"
+                  ]
                 }
               }
             }
